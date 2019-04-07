@@ -1,0 +1,93 @@
+<!doctype html>
+
+<html>
+    
+    <head>
+        <link href="https://fonts.googleapis.com/css?family=Comfortaa" rel="stylesheet">
+        
+        <link rel="stylesheet" type="text/css" href="main.css">
+        
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        
+        <script src="src/codon.js"></script>        
+        
+    </head>
+    
+    <body>
+        <div class="container">
+        
+            <h1 class="site-title">codon.js</h1>
+
+            <h1>Generate a random sequence of RNA</h1>
+
+            <button onclick="makeRandomSequence()">Generate a new sequence</button>
+
+            <h2 id="randSeq" class="bases"></h2>
+
+            <h1>and get info about it:</h1>        
+
+            <div class="info">
+
+                <h2>Complement:</h2>
+                <h2 class="bases" id="complement"></h2>
+                <h2>Amino Acids:<br><span id="acids"></span></h2>
+                <h2>GC Content: <span id="gc-content"></span></h2>
+                <h2>Most Frequent 3-mer(s): <span class="bases" id="most-frequent"></span></h2>
+                <h2>Positions at which <span class="bases" id="most-frequent-copy"></span> is found: <span id="positions"></span></h2>
+
+            </div>
+            
+            <h2>More to come...</h2>
+        
+            <a href="https://v0.run" target="_blank">
+                <img class="logo" src="assets/v0_black.svg" alt="v0">
+            </a>
+            
+        </div>
+            
+        <script>
+            var codon = new Codon();
+            
+            function colorBases(){
+                $('.bases').each(function(){
+                    var formatted = $(this).html();
+                    formatted = formatted.replace(/A/g, '<span class="red">A</span>');
+                    formatted = formatted.replace(/C/g, '<span class="green">C</span>');
+                    formatted = formatted.replace(/G/g, '<span class="blue">G</span>');
+                    formatted = formatted.replace(/T/g, '<span class="orange">T</span>');
+                    formatted = formatted.replace(/U/g, '<span class="orange">U</span>');
+                    $(this).html(formatted);
+                });
+            }
+            
+            function makeRandomSequence(){
+                var outputSequence = randomBaseSequence(33, true, true);
+                $('#randSeq').html(outputSequence);
+                document.getElementById('gc-content').innerHTML = Math.floor(gcContent(outputSequence)*100) + "%";
+                document.getElementById('complement').innerHTML = complement(outputSequence, true);
+                
+                var acids = '';
+                for(var i = 0; i < outputSequence.length - 2; i+=3){
+                    var current = outputSequence.substring(i, i+3);
+                    var name = codon.CODONS[current];
+                    if(name != 'STOP'){
+                        acids += name.tlc;
+                    }else{
+                        acids += name;
+                    }
+                }
+                document.getElementById('acids').innerHTML = acids;
+                
+                var mostFrequent = kmerMostFrequent(outputSequence, 3);
+                document.getElementById('most-frequent').innerHTML = mostFrequent;
+                $('#most-frequent-copy').html(mostFrequent[0]);
+                $('#positions').html(kmerPositions(outputSequence, mostFrequent[0]).toString());
+                
+                colorBases();
+            }
+            makeRandomSequence();
+            colorBases();
+            
+        </script>
+    </body>
+</html>
