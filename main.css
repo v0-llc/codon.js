@@ -38,6 +38,12 @@ h2 span {
     text-align: center;
 }
 
+.doc-link {
+    display: block;
+    margin: 20px;
+    font-size: 20px;
+}
+
 button {
     background: none;
     border: solid 2px black;
