@@ -124,6 +124,25 @@ function Codon(){
     }
     
     /**
+    * Calculate the hamming distance (number of different characters) between two input sequences
+    */
+    hammingDistance = function(stringOne, stringTwo){
+        if(stringOne.length != stringTwo.length){
+            throw new Error('Both input strings must be the same length');
+        }
+        
+        var distance = 0;
+        
+        for(var i = 0; i < stringOne.length; i++){
+            if(stringOne[i] != stringTwo[i]){
+                distance++;
+            }
+        }
+        
+        return distance;        
+    }
+    
+    /**
     * Generate a quaternary (0-3) numerical sequence from a character sequence
     * @param {string} inputSequence - The character sequence to convert.
     * @param {boolean} rnaFlag - The input sequence is RNA.
@@ -166,28 +185,55 @@ function Codon(){
     
     /**
     * Count the number of occurences of a given k-mer in an input sequence
-    * @parm {string} inputSequence - The sequence to search
+    * @param {string} inputSequence - The sequence to search
     * @param {string} kmer - The k-mer to count
+    * @param {number} mismatches - The maximum acceptable Hamming distance between the k-mer and matching patterns in the input sequence
     */
-    kmerCount = function(inputSequence, kmer){
+    kmerCount = function(inputSequence, kmer, mismatches = 0){
+        if(mismatches < 0){
+            throw new Error('Maximum acceptable Hamming distance must be a positive number.');
+        }
+        
         var count = 0;
+        
         for(var i = 0; i < inputSequence.length - kmer.length + 1; i++){
-            if(inputSequence.substring(i, i+kmer.length) == kmer){                
-                count++;
-            }
+            var current = inputSequence.substring(i, i+kmer.length);
+            if(mismatches > 0){
+                if(hammingDistance(kmer, current) <= mismatches){
+                    count++;
+                }
+            }else{
+                if(current == kmer){
+                    count++;
+                }
+            }            
         }
         return count;
     }
     
     /**
     * Find all starting positions in the input sequence where the k-mer appears as a substring
+    * @param {string} inputSequence - The sequence to search
+    * @param {string} kmer - Find the starting positions of this k-mer
+    * @param {number} mismatches - The maximum acceptable Hamming distance between the k-mer and matching patterns in the input sequence
     */
-    kmerPositions = function(inputSequence, kmer){
+    kmerPositions = function(inputSequence, kmer, mismatches = 0){
+        if(mismatches < 0){
+            throw new Error('Maximum acceptable Hamming distance must be a positive number.');
+        }
+        
         var positions = [];
         for(var i = 0; i < inputSequence.length - kmer.length + 1; i++){
-            if(inputSequence.substring(i, i+kmer.length) == kmer){
-                positions.push(i);
-            }
+            var current = inputSequence.substring(i, i+kmer.length);
+            if(mismatches > 0){
+                if(hammingDistance(kmer, current) <= mismatches){
+                    positions.push(i);
+                }
+            }else{
+                if(current == kmer){
+                    positions.push(i);
+                }
+            }            
         }
         return positions;
     }
@@ -198,7 +244,9 @@ function Codon(){
     * @param {number} kmerLength - search for the most frequent k-mers of this length
     * @param {number} minFrequency - only return the most frequent pattern(s) if they occur at least this many times
     */
-    kmerMostFrequent = function(inputSequence, kmerLength, minFrequency = 1){
+    kmerMostFrequent = function(inputSequence, kmerLength, minFrequency = 1, mismatches = 0, complements = false){
+        // TODO: Implement mismatches and complements
+        
         var mostFrequentPatterns = [];
         var count = [];
         for(var i = 0; i < inputSequence.length - kmerLength + 1; i++){
@@ -236,6 +284,38 @@ function Codon(){
         }
         
         return removeDuplicates(clumps);
+    }
+    
+    /**
+    * Find the minimum GC skew position(s) in a given input sequence
+    */
+    minimumSkew = function(inputSequence) {
+        var minimums = new Map();
+        
+        var currentSkew = 0;
+        var minimumSkew;
+        
+        for(var i = 0; i < inputSequence.length; i++){
+            if(inputSequence[i]=='G'){
+                currentSkew++;
+            }else if (inputSequence[i]=='C'){
+                currentSkew--;
+                
+                if(currentSkew == minimumSkew) {
+                    minimums.set(i, currentSkew);
+                }else if(currentSkew < minimumSkew){
+                    minimumSkew = currentSkew;
+                    minimums.clear();
+                    minimums.set(i, currentSkew);
+                }
+            }
+            if(minimumSkew == null){
+                minimumSkew = currentSkew
+                minimums.set(i, currentSkew);
+            }
+        }
+
+        return Array.from(minimums.keys());
     }
     
     /**
@@ -326,21 +406,50 @@ function Codon(){
         return output;
     }
     
+    /**
+    * Remove comments and line breaks from a FASTA formatted input string, and return a substring according to input arguments
+    * @param {string} inputSequence - The sequence to parse
+    */
+    parseFasta = function(inputSequence, startingPosition = 0, length = null){
+        if(length == null) {
+            length = inputSequence.length - startingPosition;
+        }
+        var commentsRemoved = inputSequence.replace(/>(.*?)\n/g, '');
+        var lineBreaksRemoved = commentsRemoved.replace(/\n/g, '');
+        var outputString = lineBreaksRemoved.substring(startingPosition, startingPosition + length);
+        return outputString;
+    }
+    
+    dnaToRna = function(inputSequence) {
+        return inputSequence.replace(/T/g, 'U');
+    }
+    
+    isRNA = function(inputSequence){
+        for(var i = 0; i < inputSequence.length; i++){
+            if(inputSequence[i] == 'U') return true;
+            if(inputSequence[i] == 'T') return false;
+        }
+    }
+    
     return{
         'AMINO_ACIDS': AMINO_ACIDS,
         'CODONS': CODONS,
         
+        'hammingDistance': hammingDistance,
         'quaternarySequence': quaternarySequence,
         'baseCount': baseCount,
         'kmerCount': kmerCount,
         'kmerPositions': kmerPositions,
         'kmerMostFrequent': kmerMostFrequent,
+        'minimumSkew': minimumSkew,
         'randomBase': randomBase,
         'randomBaseSequence': randomBaseSequence,
         'randomCodon': randomCodon,
         'randomCodonSequence': randomCodonSequence,
         'gcContent': gcContent,
-        //'complement': complement,
+        'complement': complement,
+        'parseFasta': parseFasta,
+        'isRNA': isRNA,
     }
     
 }
